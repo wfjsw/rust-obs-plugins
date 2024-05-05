@@ -4,6 +4,7 @@ use super::context::{CreatableSourceContext, GlobalContext, VideoRenderContext};
 use super::{EnumActiveContext, EnumAllContext, SourceRef, SourceType};
 use crate::data::DataObj;
 use crate::media::state::MediaState;
+use crate::media::AudioData;
 use crate::media::{audio::AudioDataContext, video::VideoDataSourceContext};
 use crate::properties::Properties;
 use crate::string::ObsString;
@@ -92,8 +93,14 @@ simple_trait!(
     transition_stop => TransitionStopSource
 );
 
+pub enum FilterAudioResult {
+    Modified,
+    New(AudioData),
+    Discarded,
+}
+
 pub trait FilterAudioSource: Sized {
-    fn filter_audio(&mut self, audio: &mut AudioDataContext);
+    fn filter_audio(&mut self, audio: &mut AudioDataContext) -> FilterAudioResult;
 }
 
 pub trait FilterVideoSource: Sized {

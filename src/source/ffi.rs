@@ -1,6 +1,7 @@
 use super::context::{CreatableSourceContext, GlobalContext, VideoRenderContext};
 use super::{traits::*, SourceRef};
 use super::{EnumActiveContext, EnumAllContext};
+use crate::media::AudioData;
 use crate::media::{audio::AudioDataContext, video::VideoDataSourceContext};
 use crate::{
     data::DataObj,
@@ -25,6 +26,7 @@ struct DataWrapper<D> {
     data: D,
     #[allow(clippy::type_complexity)]
     hotkey_callbacks: HashMap<obs_hotkey_id, Box<dyn FnMut(&mut Hotkey, &mut D)>>,
+    previous_audio_data: Option<Box<AudioData>>,
 }
 
 impl<D> DataWrapper<D> {
@@ -53,6 +55,7 @@ impl<D> From<D> for DataWrapper<D> {
         Self {
             data,
             hotkey_callbacks: HashMap::new(),
+            previous_audio_data: None,
         }
     }
 }
@@ -193,8 +196,23 @@ pub unsafe extern "C" fn filter_audio<D: FilterAudioSource>(
 ) -> *mut obs_audio_data {
     let mut context = AudioDataContext::from_raw(audio);
     let wrapper: &mut DataWrapper<D> = &mut *(data as *mut DataWrapper<D>);
-    D::filter_audio(&mut wrapper.data, &mut context);
-    audio
+
+    if let Some(previous_audio_data) = wrapper.previous_audio_data.take() {
+        drop(previous_audio_data)
+    }
+
+    let result = D::filter_audio(&mut wrapper.data, &mut context);
+    
+    match result {
+        FilterAudioResult::Modified => audio,
+        FilterAudioResult::New(data) => {
+            let boxed_data = Box::new(data);
+            let audio_data = &mut boxed_data.as_ref().to_raw() as *mut obs_audio_data;
+            wrapper.previous_audio_data = Some(boxed_data);
+            audio_data
+        }
+        FilterAudioResult::Discarded => std::ptr::null_mut(),
+    }
 }
 
 pub unsafe extern "C" fn filter_video<D: FilterVideoSource>(
