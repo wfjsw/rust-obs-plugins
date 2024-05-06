@@ -3,9 +3,7 @@ use crate::source::{traits::Sourceable, SourceInfo, SourceInfoBuilder};
 use crate::string::{DisplayExt as _, ObsString, TryIntoObsString as _};
 use crate::{Error, Result};
 use obs_sys::{
-    obs_get_module_author, obs_get_module_description, obs_get_module_file_name,
-    obs_get_module_name, obs_module_t, obs_output_info, obs_register_output_s,
-    obs_register_source_s, obs_source_info, size_t,
+    obs_get_module_author, obs_get_module_binary_path, obs_get_module_data_path, obs_get_module_description, obs_get_module_file_name, obs_get_module_name, obs_module_t, obs_output_info, obs_register_output_s, obs_register_source_s, obs_source_info, size_t
 };
 use std::marker::PhantomData;
 
@@ -205,5 +203,13 @@ impl ModuleRef {
 
     pub fn file_name(&self) -> Result<ObsString> {
         unsafe { obs_get_module_file_name(self.raw) }.try_into_obs_string()
+    }
+
+    pub fn binary_path(&self) -> Result<ObsString> {
+        unsafe { obs_get_module_binary_path(self.raw) }.try_into_obs_string()
+    }
+
+    pub fn data_path(&self) -> Result<ObsString> {
+        unsafe { obs_get_module_data_path(self.raw) }.try_into_obs_string()
     }
 }
